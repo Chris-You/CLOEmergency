@@ -1,0 +1,20 @@
+﻿[
+  {
+    "name": "김철수2",
+    "email": "chulsu2@naver.com",
+    "tel": "010-1111-2222",
+    "joined": "2022-11-10"
+  },
+  {
+    "name": "박영희2",
+    "email": "younghee2@naver.com",
+    "tel": "010-1234-5678",
+    "joined": "2022-11-11"
+  },
+  {
+    "name": "홍길동2",
+    "email": "gildong2@naver.com",
+    "tel": "010-4455-7890",
+    "joined": "2022-11-12"
+  }
+]
