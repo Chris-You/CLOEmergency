@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-
+﻿
 namespace CLOEmergency.Models
 {
     public class Employee
@@ -9,6 +8,7 @@ namespace CLOEmergency.Models
             Name = string.Empty;
             Email = string.Empty;
             Tel = string.Empty;
+            Joined = string.Empty;
         }
 
         [JsonProperty("name")]

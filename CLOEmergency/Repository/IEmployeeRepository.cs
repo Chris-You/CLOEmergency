@@ -1,5 +1,4 @@
-﻿using CLOEmergency.Models;
-
+﻿
 namespace CLOEmergency.Repository
 {
     public interface IEmployeeRepository

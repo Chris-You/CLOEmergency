@@ -1,7 +1,4 @@
-﻿using CLOEmergency.Models;
-using CLOEmergency.Repository;
-using System.Xml.Linq;
-using AutoMapper;
+﻿using AutoMapper;
 
 namespace CLOEmergency.Services
 {
