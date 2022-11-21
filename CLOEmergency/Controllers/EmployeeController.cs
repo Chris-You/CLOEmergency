@@ -1,17 +1,13 @@
-﻿using AutoMapper;
-using CLOEmergency.Models;
-using CLOEmergency.Services;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
-using System.Text;
-using System.Text.Encodings.Web;
-using System.Web;
 using System.Xml.Linq;
+
 
 namespace CLOEmergency.Controllers
 {
+    
+    
     [Route("api/[controller]")]
     [ApiController]
     public class EmployeeController : ControllerBase
@@ -29,7 +25,10 @@ namespace CLOEmergency.Controllers
             _employeeService = employeeService;
         }
 
-
+        /// <summary>
+        /// Employee List 
+        /// </summary>
+        /// <returns></returns>
         [HttpGet]
         public IActionResult GetList()
         {
@@ -48,7 +47,18 @@ namespace CLOEmergency.Controllers
         [HttpGet("{name}")]
         public IActionResult GetItem(string name)
         {
-            var employee = _employeeService.GetEmployee(HttpUtility.UrlDecode(name));
+            var employee = new EmployeeDTO();
+            try
+            {
+                employee = _employeeService.GetEmployee(HttpUtility.UrlDecode(name));
+                
+            }
+            catch(Exception e)
+            {
+                _logger.LogCritical(e, "GetItem Exception");
+
+                employee = null;
+            }
 
             if (employee == null)
             {
@@ -60,12 +70,12 @@ namespace CLOEmergency.Controllers
             }
         }
 
-        
+
         /// <summary>
-        ///   body 데이터에 회원정보를 받는다.(json, csv)
+        /// body(cvs, json) 데이터에 회원정보를 생성
         /// </summary>
         /// <param name="emp">회원정보 형식 데이터</param>
-        /// <returns></returns>
+        /// <returns>생성된 회원정보 리턴</returns>
         [HttpPost]
         [Route("body")]
         [Consumes("text/plain")]
@@ -86,22 +96,40 @@ namespace CLOEmergency.Controllers
             if(!isJsonType)
             {
                 // 개행문자로 분리
-                foreach (string line in body.Split("\n"))
+                foreach (string line in body.Split("\r\n"))
                 {
                     if (!string.IsNullOrEmpty(line))
                     {
                         string[] emp = line.Split(",");
                         employeeList.Add(new Employee { Name = emp[0], 
-                                                    Email = emp[1], 
-                                                    Tel = emp[2], 
-                                                    Joined = emp[3] });
+                                                        Email = emp[1], 
+                                                        Tel = emp[2], 
+                                                        Joined = emp[3] });
                     }
                 }
             }
 
-            var result = _employeeService.InsertEmployee(employeeList);
+            
+            try
+            {
+                // 파일 형식이 비정상(데이터가 없음)
+                if (employeeList.Count() == 0)
+                {
+                    _logger.LogWarning(body, "body Warning");
+                    return BadRequest("body data is incorrect");
+                }
+                else
+                {
+                    var result = _employeeService.InsertEmployee(employeeList);
 
-            return CreatedAtAction(nameof(GetList), result);
+                    return CreatedAtAction(nameof(GetList), result);
+                }
+            }
+            catch(Exception e)
+            {
+                _logger.LogCritical(e, "PostBody Exception");
+                return NoContent();
+            }
         }
 
         /*
@@ -154,16 +182,33 @@ namespace CLOEmergency.Controllers
         /// 파일을 이용하여 회원등록
         /// </summary>
         /// <param name="file">cvs, json 만 가능</param>
-        /// <returns></returns>
+        /// <returns>생성된 회원정보 리턴</returns>
         [HttpPost]
         public IActionResult Post(IFormFile file)
         {
-            var employee = this.ReadFile(file);
+            try
+            {
+                var employee = this.ReadFile(file);
 
-            //add  service 작업
-            var result =  _employeeService.InsertEmployee(employee);
+                if (employee.Count() == 0)
+                {
+                    _logger.LogWarning(file.Name, "File Warnning");
+                    return BadRequest("file contents are wrong.");
+                }
+                else
+                {
+                    //add  service 작업
+                    var result = _employeeService.InsertEmployee(employee);
 
-            return CreatedAtAction(nameof(GetList), result);
+                    return CreatedAtAction(nameof(GetList), result);
+                }
+            }
+            catch(Exception e)
+            {
+                _logger.LogCritical(e, "PostFile Exception");
+                return NoContent();
+            }
+            
         }
 
 
@@ -171,40 +216,48 @@ namespace CLOEmergency.Controllers
         /// 파일을 읽어 처리한다.
         /// </summary>
         /// <param name="file">넘어온 파일 정보</param>
-        /// <returns></returns>
+        /// <returns>List<Employee></returns>
         private List<Employee> ReadFile(IFormFile file)
         {
             var employee = new List<Employee>();
+            
+            using (var reader = new StreamReader(file.OpenReadStream()))
+            {
+                StringBuilder sb = new StringBuilder();
+                string jsonEmp = string.Empty;
 
-            if (file.FileName.Split(".").Last().ToLower() == "csv")
-            {
-                using (var reader = new StreamReader(file.OpenReadStream()))
+                while (reader.Peek() >= 0)
                 {
-                    while (reader.Peek() >= 0)
-                    {
-                        var emp = reader.ReadLine().Split(",");
-                        employee.Add(new Employee { Name = emp[0], Email = emp[1], Tel = emp[2], Joined = emp[3] });
-                    }
-                }
-            }
-            else if (file.FileName.Split(".").Last().ToLower() == "json")
-            {
-                var result = new StringBuilder();
-                using (var reader = new StreamReader(file.OpenReadStream()))
-                {
-                    while (reader.Peek() >= 0)
-                    {
-                        result.Append(reader.ReadLine());
-                    }
+                    sb.Append(reader.ReadToEnd());
                 }
 
-                employee = JsonConvert.DeserializeObject<List<Employee>>(result.ToString());
+                if (file.FileName.Split(".").Last().ToLower() == "csv")
+                {
+                    JArray jArray = new JArray();
+
+                    foreach (var line in sb.ToString().Split("\r\n"))
+                    {
+                        var emp = line.Split(",");
+                        JObject jObject = new JObject();
+                        jObject.Add("Name", emp[0]);
+                        jObject.Add("Email", emp[1]);
+                        jObject.Add("Tel", emp[2]);
+                        jObject.Add("Joined", emp[3]);
+
+                        jArray.Add(jObject);
+                    }
+
+                    jsonEmp = JsonConvert.SerializeObject(jArray);
+                }
+                else
+                {
+                    jsonEmp = sb.ToString();
+                }
+
+                employee = JsonConvert.DeserializeObject<List<Employee>>(jsonEmp);
             }
 
             return employee;
-
-
         }
-
     }
 }
