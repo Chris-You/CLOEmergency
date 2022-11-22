@@ -1,13 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
-using System.Xml.Linq;
-
 
 namespace CLOEmergency.Controllers
 {
-    
-    
     [Route("api/[controller]")]
     [ApiController]
     public class EmployeeController : ControllerBase
@@ -56,7 +51,6 @@ namespace CLOEmergency.Controllers
             catch(Exception e)
             {
                 _logger.LogCritical(e, "GetItem Exception");
-
                 employee = null;
             }
 
@@ -82,18 +76,22 @@ namespace CLOEmergency.Controllers
         public IActionResult PostBody([FromBody] string body)
         {
             var employeeList = new List<Employee>();
-            bool isJsonType = true;
-            // Request.Body 에 어떤 형식이 들어올지 알수 없기떄문에 string으로 받아서 파싱
+            bool isCsvType = true;
+            
             try
             {
+                // Request.Body 에 csv, json 이 올지 알수 없기떄문에 string으로 받아서 파싱
+                // Deserialize 가 되면 json 형식
                 employeeList = JsonConvert.DeserializeObject<List<Employee>>(body);
+
+                isCsvType = false;
             }
             catch (Exception ex) {
-                isJsonType = false;
+                
             }
 
             // json 형식의 데이터가 아니면 csv 파일을 파싱
-            if(!isJsonType)
+            if(isCsvType)
             {
                 // 개행문자로 분리
                 foreach (string line in body.Split("\r\n"))

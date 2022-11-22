@@ -5,7 +5,6 @@ namespace CLOEmergency.Repository
     {
         List<EmployeeDTO> GetEmployeeList();
         EmployeeDTO GetEmployee(string name);
-
         EmployeeDTO InsEmployee(EmployeeDTO employee);
     }
 }

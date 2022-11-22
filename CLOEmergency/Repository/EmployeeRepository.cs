@@ -6,7 +6,6 @@ namespace CLOEmergency.Repository
         // 테스트용 데이터 저장소 
         public List<EmployeeDTO> _employees;
 
-
         public EmployeeRepository()
         {
             _employees = new List<EmployeeDTO>();
@@ -15,10 +14,8 @@ namespace CLOEmergency.Repository
             _employees.Add(new EmployeeDTO { Name = "홍길동1", Email = "chulsu@naver.com", Tel = "010-4455-7890", Joined = "2022-11-12" } );
         }
 
-
         public List<EmployeeDTO> GetEmployeeList() => _employees;
         
-
         public EmployeeDTO GetEmployee(string name)
         {
             var emp = _employees.Where(emp => emp.Name == name);
